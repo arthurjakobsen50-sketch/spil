@@ -1380,20 +1380,21 @@ export class Material implements IAnimatable, IClipPlanesHolder {
                 continue;
             }
             for (const subMesh of mesh.subMeshes) {
-                if (subMesh.getMaterial() !== this) {
-                    continue;
-                }
-
-                for (const drawWrapper of subMesh._drawWrappers) {
+                subMesh._drawWrappers.forEach((drawWrapper, passId) => {
                     if (!drawWrapper) {
-                        continue;
+                        return;
                     }
+
+                    if (subMesh.getMaterial(true, passId) !== this) {
+                        return;
+                    }
+
                     if (this._materialContext === drawWrapper.materialContext) {
                         drawWrapper._wasPreviouslyReady = false;
                         drawWrapper._wasPreviouslyUsingInstances = null;
                         drawWrapper._forceRebindOnNextCall = forceMaterialDirty;
                     }
-                }
+                });
             }
         }
 
@@ -1849,11 +1850,16 @@ export class Material implements IAnimatable, IClipPlanesHolder {
                 continue;
             }
             for (const subMesh of mesh.subMeshes) {
-                if (subMesh.getMaterial() !== this) {
-                    continue;
-                }
+                subMesh._drawWrappers.forEach((drawWrapper, passId) => {
+                    if (!drawWrapper) {
+                        return;
+                    }
 
-                subMesh.resetDrawCache();
+                    if (subMesh.getMaterial(true, passId) !== this) {
+                        return;
+                    }
+                    subMesh.resetDrawCache(passId);
+                });
             }
         }
     }
@@ -1875,19 +1881,19 @@ export class Material implements IAnimatable, IClipPlanesHolder {
             }
             for (const subMesh of mesh.subMeshes) {
                 // We want to skip the submeshes which are not using this material or which have not yet rendered at least once
-                const material = subMesh.getMaterial() || (scene._hasDefaultMaterial ? scene.defaultMaterial : null);
-                if (material !== this) {
-                    continue;
-                }
-
-                for (const drawWrapper of subMesh._drawWrappers) {
-                    if (!drawWrapper || !drawWrapper.defines || !(drawWrapper.defines as MaterialDefines).markAllAsDirty) {
-                        continue;
+                subMesh._drawWrappers.forEach((drawWrapper, passId) => {
+                    if (!drawWrapper) {
+                        return;
                     }
+
+                    if (subMesh.getMaterial(true, passId) !== this || !drawWrapper.defines || !(drawWrapper.defines as MaterialDefines).markAllAsDirty) {
+                        return;
+                    }
+
                     if (this._materialContext === drawWrapper.materialContext) {
                         func(drawWrapper.defines as MaterialDefines);
                     }
-                }
+                });
             }
         }
     }
